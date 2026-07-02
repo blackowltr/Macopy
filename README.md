@@ -35,7 +35,11 @@ brew install --cask macopy
 
 ### Doğrudan İndirme
 
-[GitHub Releases](https://github.com/blackowltr/Macopy/releases)'ten DMG'yi indir, `.app`'i Applications klasörüne sürükle.
+1. [GitHub Releases](https://github.com/blackowltr/Macopy/releases)'ten DMG'yi indir
+2. DMG'yi aç
+3. **Install.command** dosyasına çift tıkla — otomatik kurar ve açar
+
+> Manuel kurulum: Macopy'yi sürükle-bırak ile Applications'a kopyala, sonra terminalde `xattr -cr /Applications/Macopy.app` çalıştır.
 
 ### Kaynaktan Derleme
 
