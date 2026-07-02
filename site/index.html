@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Macopy — Pano Geçmiş Yöneticisi for Mac</title>
+  <meta name="description" content="Macopy ile kopyaladığınız her şeyi anında bulun. ⌘B ile pano geçmişi, sabitleme, arama ve daha fazlası. Ücretsiz, gizli, Apple Silicon.">
+  <meta property="og:title" content="Macopy — Pano Geçmiş Yöneticisi for Mac">
+  <meta property="og:description" content="Kopyaladığınız her şeyi anında bulun. ⌘B ile pano geçmişi, sabitleme, arama. Ücretsiz, macOS 12+.">
+  <meta property="og:image" content="https://jarvis322.github.io/Macopy/icon.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff;
+      --bg-soft: #f5f5f7;
+      --card: #ffffff;
+      --border: #e6e6eb;
+      --border-strong: #d2d2d7;
+      --accent: #0A84FF;
+      --accent-deep: #0060CC;
+      --accent-soft: #EBF4FF;
+      --text: #1d1d1f;
+      --text2: #6e6e73;
+      --text3: #86868b;
+      --radius: 20px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+      --shadow-md: 0 10px 30px rgba(0,0,0,.08);
+      --shadow-lg: 0 30px 60px rgba(0,0,0,.10);
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px; height: 54px;
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: blur(20px) saturate(180%);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-brand { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 16px; letter-spacing: -.01em; }
+    .nav-brand img { width: 26px; height: 26px; border-radius: 7px; }
+    .nav-right { display: flex; align-items: center; gap: 10px; }
+    .nav-gh {
+      display: flex; align-items: center; gap: 6px;
+      color: var(--text2); text-decoration: none; font-size: 13px;
+      padding: 6px 12px; border-radius: 8px;
+      transition: color .15s, background .15s;
+    }
+    .nav-gh:hover { color: var(--text); background: var(--bg-soft); }
+    .nav-dl {
+      background: var(--accent); color: #fff;
+      border-radius: 980px; padding: 7px 18px;
+      font-size: 13px; font-weight: 600; text-decoration: none;
+      transition: transform .15s, box-shadow .15s;
+      box-shadow: 0 2px 8px rgba(10,132,255,.25);
+    }
+    .nav-dl:hover { transform: scale(1.04); }
+
+    /* HERO */
+    .hero {
+      min-height: 96vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 110px 24px 70px; text-align: center; position: relative;
+      background:
+        radial-gradient(ellipse 70% 50% at 50% 0%, var(--accent-soft) 0%, transparent 60%),
+        var(--bg);
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--accent-soft); color: var(--accent-deep);
+      border-radius: 980px; padding: 6px 15px;
+      font-size: 12.5px; font-weight: 600; margin-bottom: 28px;
+    }
+    .hero-badge-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+    h1 {
+      font-size: clamp(44px, 8vw, 86px);
+      font-weight: 700; letter-spacing: -0.04em; line-height: 1.05;
+      margin-bottom: 22px; color: #1d1d1f;
+    }
+    h1 em { font-style: normal; color: var(--accent); }
+    .hero-sub {
+      font-size: clamp(17px, 2vw, 21px); color: var(--text2);
+      max-width: 540px; line-height: 1.55; margin-bottom: 44px;
+    }
+
+    /* INSTALL CARD */
+    .install-card {
+      width: 100%; max-width: 500px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+    }
+    .install-tabs { display: flex; border-bottom: 1px solid var(--border); }
+    .itab {
+      flex: 1; padding: 13px 16px;
+      background: transparent; border: none;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      transition: background .15s, color .15s;
+      position: relative; color: var(--text2);
+    }
+    .itab.active { color: var(--text); background: var(--bg-soft); }
+    .itab.active::after {
+      content: ''; position: absolute; bottom: -1px; left: 16px; right: 16px;
+      height: 2px; background: var(--accent); border-radius: 2px;
+    }
+    .itab:first-child { border-right: 1px solid var(--border); }
+    .ipanel { display: none; padding: 20px; text-align: left; }
+    .ipanel.active { display: block; }
+    .code-block {
+      background: #1d1d1f; border-radius: 12px; padding: 16px 18px;
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 13px; line-height: 1.9; color: #f5f5f7;
+    }
+    .code-block .prompt { color: var(--accent); user-select: none; }
+
+    .dmg-row { display: flex; align-items: center; justify-content: space-between; }
+    .dmg-info h4 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+    .dmg-info p { font-size: 12px; color: var(--text3); }
+    .dmg-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--accent); color: #fff; text-decoration: none;
+      border-radius: 10px; padding: 9px 16px; font-size: 13px; font-weight: 600;
+      transition: transform .15s; box-shadow: 0 2px 8px rgba(10,132,255,.25);
+    }
+    .dmg-btn:hover { transform: scale(1.04); }
+    .install-footer {
+      padding: 12px 20px; border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      font-size: 12px; color: var(--text3);
+    }
+    .install-footer .ck { color: var(--accent); font-weight: 700; }
+
+    /* SCREENSHOT */
+    .ss-wrap { margin-top: 60px; max-width: 440px; width: 100%; }
+    .ss-wrap img {
+      width: 100%; border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* SHORTCUTS */
+    .shortcuts {
+      max-width: 720px; margin: 60px auto 0; padding: 0 24px;
+      display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+    }
+    .shortcut-card {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px 20px;
+      box-shadow: var(--shadow-sm);
+      transition: transform .15s, box-shadow .15s;
+    }
+    .shortcut-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .shortcut-card .sc-keys {
+      display: flex; gap: 4px;
+    }
+    .key {
+      background: var(--bg-soft); border: 1px solid var(--border);
+      border-radius: 6px; padding: 4px 10px;
+      font-size: 13px; font-weight: 600; font-family: "SF Mono", monospace;
+      color: var(--text);
+      box-shadow: 0 1px 2px rgba(0,0,0,.06);
+    }
+    .shortcut-card .sc-label {
+      font-size: 13px; color: var(--text2); font-weight: 500;
+    }
+
+    /* SECTIONS */
+    .section { max-width: 1080px; margin: 0 auto; padding: 110px 24px; }
+    .label {
+      font-size: 13px; font-weight: 600; letter-spacing: .02em;
+      color: var(--accent); margin-bottom: 14px;
+    }
+    .section-h { font-size: clamp(30px, 4vw, 46px); font-weight: 700; letter-spacing: -0.025em; line-height: 1.12; color: #1d1d1f; }
+    .section-p { font-size: 18px; color: var(--text2); margin-top: 14px; max-width: 520px; line-height: 1.6; }
+
+    /* FEATURES */
+    .features { max-width: 1080px; margin: 0 auto; padding: 0 24px 100px; }
+    .features-head { text-align: center; margin-bottom: 56px; }
+    .features-head h2 { font-size: clamp(30px, 4vw, 46px); font-weight: 700; letter-spacing: -0.025em; max-width: 540px; margin: 0 auto; color: #1d1d1f; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    @media(max-width:780px){ .grid { grid-template-columns: 1fr; } }
+    .feat {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px;
+      transition: transform .2s, box-shadow .2s, border-color .2s;
+    }
+    .feat:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--border-strong); }
+    .feat.hl { background: var(--accent-soft); border-color: rgba(10,132,255,.25); }
+    .feat-ic {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: var(--bg-soft); display: flex; align-items: center; justify-content: center;
+      font-size: 22px; margin-bottom: 16px;
+    }
+    .feat.hl .feat-ic { background: #fff; }
+    .feat h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+    .feat p { font-size: 14px; color: var(--text2); line-height: 1.6; }
+
+    /* CTA */
+    .cta {
+      padding: 120px 24px; text-align: center;
+      background: radial-gradient(ellipse 60% 60% at 50% 100%, var(--accent-soft) 0%, transparent 65%), var(--bg);
+    }
+    .cta-icon { width: 76px; height: 76px; border-radius: 18px; margin: 0 auto 28px; box-shadow: var(--shadow-md); }
+    .cta h2 { font-size: clamp(30px, 5vw, 50px); font-weight: 700; letter-spacing: -0.025em; margin-bottom: 14px; color: #1d1d1f; }
+    .cta p { font-size: 18px; color: var(--text2); margin-bottom: 40px; }
+    .cta-dl {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff; border-radius: 980px;
+      padding: 16px 38px; font-size: 17px; font-weight: 600; text-decoration: none;
+      transition: transform .15s; box-shadow: 0 6px 20px rgba(10,132,255,.3);
+    }
+    .cta-dl:hover { transform: scale(1.04); }
+    .cta-code {
+      margin-top: 20px; font-size: 13px; color: var(--text3);
+    }
+    .cta-code code { background: var(--bg-soft); border: 1px solid var(--border); padding: 4px 10px; border-radius: 6px; font-family: "SF Mono", monospace; }
+    .cta-note { margin-top: 16px; font-size: 13px; color: var(--text3); }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border); padding: 30px 40px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px; background: var(--bg-soft);
+    }
+    footer span { font-size: 13px; color: var(--text3); }
+    .footer-links { display: flex; gap: 22px; }
+    footer a { color: var(--text2); text-decoration: none; font-size: 13px; transition: color .15s; }
+    footer a:hover { color: var(--text); }
+
+    @media(max-width:600px){ nav { padding: 0 20px; } .hero { padding: 96px 20px 56px; } footer { padding: 24px 20px; } .shortcuts { flex-direction: column; align-items: center; } }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">
+    <img src="icon.png" alt="Macopy icon">
+    Macopy
+  </div>
+  <div class="nav-right">
+    <a class="nav-gh" href="https://github.com/blackowltr/Macopy" target="_blank">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+    <a class="nav-dl" href="https://github.com/blackowltr/Macopy/releases/download/v1.1.0/Macopy-1.1.0.dmg">İndir</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">
+    <span class="hero-badge-dot"></span>
+    Ücretsiz · Açık Kaynak · macOS 12+
+  </div>
+  <h1>Kopyaladığın her şey,<br><em>bir tuş uzağında.</em></h1>
+  <p class="hero-sub">Macopy, menü çubuğunda yaşar ve panonu izler. ⌘B ile geçmişini aç, ara, sabitle, yapıştır — hepsi bu kadar.</p>
+
+  <div class="install-card">
+    <div class="install-tabs">
+      <button class="itab active" onclick="switchTab('brew',this)">🍺 &nbsp;Homebrew</button>
+      <button class="itab" onclick="switchTab('dmg',this)">📦 &nbsp;Doğrudan İndirme</button>
+    </div>
+    <div id="panel-brew" class="ipanel active">
+      <div class="code-block">
+        <div><span class="prompt">$</span> brew tap baris/tap</div>
+        <div><span class="prompt">$</span> brew install --cask macopy</div>
+      </div>
+    </div>
+    <div id="panel-dmg" class="ipanel">
+      <div class="dmg-row">
+        <div class="dmg-info">
+          <h4>Macopy-1.1.0.dmg</h4>
+          <p>~200 KB · Ad-hoc imzalı · Apple Silicon</p>
+        </div>
+        <a class="dmg-btn" href="https://github.com/blackowltr/Macopy/releases/download/v1.1.0/Macopy-1.1.0.dmg">↓ İndir</a>
+      </div>
+      <p style="font-size:12px;color:var(--text3);margin-top:12px;">DMG'yi aç ve Macopy'yi Applications klasörüne sürükle.</p>
+    </div>
+    <div class="install-footer"><span class="ck">✓</span> Sonsuza dek ücretsiz &nbsp;·&nbsp; Hesap gerekmez &nbsp;·&nbsp; Veri toplamaz</div>
+  </div>
+
+  <div class="ss-wrap">
+    <img src="screenshot.png" alt="Macopy panel">
+  </div>
+
+  <div class="shortcuts">
+    <div class="shortcut-card">
+      <div class="sc-keys">
+        <span class="key">⌘</span><span class="key">B</span>
+      </div>
+      <span class="sc-label">Panoyu Aç</span>
+    </div>
+    <div class="shortcut-card">
+      <div class="sc-keys">
+        <span class="key">⌘</span><span class="key">C</span>
+      </div>
+      <span class="sc-label">Kopyala</span>
+    </div>
+    <div class="shortcut-card">
+      <div class="sc-keys">
+        <span class="key">ESC</span>
+      </div>
+      <span class="sc-label">Kapat</span>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<div class="features">
+  <div class="features-head">
+    <div class="label" style="text-align:center;">Özellikler</div>
+    <h2>Panoyu tam istediğin gibi yönet.</h2>
+  </div>
+  <div class="grid">
+    <div class="feat hl">
+      <div class="feat-ic">📋</div>
+      <h3>Otomatik Geçmiş</h3>
+      <p>Kopyaladığın her şey otomatik kaydedilir. Metin, dosya, resim — hepsi geçmişte.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-ic">🔍</div>
+      <h3>Anında Arama</h3>
+      <p>Geçmişinde binlerce öğe olsa bile, arama çubuğuyla istediğin anda bul.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-ic">📌</div>
+      <h3>Sabitleme</h3>
+      <p>Önemli kopyalarını sabitle. Temizleme yapsan bile sabitlenenler kalır.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-ic">⌨️</div>
+      <h3>Klavye Kısayolu</h3>
+      <p>⌘B ile panele aç, tıkla ve yapıştır. Hızlı ve sezgisel.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-ic">🎨</div>
+      <h3>Renkli Kategoriler</h3>
+      <p>Metin mavi, dosya turuncu, resim mor — her tür kendi rengiyle.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-ic">⚡</div>
+      <h3>Otomatik Kapanma</h3>
+      <p>Dışarı tıklayınca veya yeni kopyalama yapınca panel otomatik kapanır.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-ic">🔋</div>
+      <h3>Pil Dostu</h3>
+      <p>Akıllı polling, termal yönetim, arkaplan optimizasyonu. Pilini yormaz.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-ic">🔒</div>
+      <h3>%100 Özel</h3>
+      <p>Bulut yok, hesap yok. Verilerin Mac'inden çıkmaz. Parola yöneticilerini atlar.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-ic">🍎</div>
+      <h3>Apple Silicon</h3>
+      <p>M1, M2, M3, M4 ile tam uyumlu. Rosetta gerekmez.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-ic">💾</div>
+      <h3>Akıllı Depolama</h3>
+      <p>Resimler otomatik sıkıştırılır, 20MB kota, 7 gün sonra temizlik.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-ic">🚀</div>
+      <h3>Otomatik Başlat</h3>
+      <p>Menüden aç, Mac açılınca otomatik başlasın. Hiç düşünme.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-ic">🌙</div>
+      <h3>Uyku Yönetimi</h3>
+      <p>Mac uykuya gidince dinlenir, uyanınca devam eder.</p>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<section class="cta">
+  <img class="cta-icon" src="icon.png" alt="Macopy">
+  <h2>Panonu kontrol altına al.</h2>
+  <p>Ücretsiz indir. Kayıt gerekmez. Aç ve çalışır.</p>
+  <a class="cta-dl" href="https://github.com/blackowltr/Macopy/releases/download/v1.1.0/Macopy-1.1.0.dmg">↓ &nbsp;Macopy'yi İndir — Ücretsiz</a>
+  <p class="cta-code">veya &nbsp;<code>brew install --cask macopy</code></p>
+  <p class="cta-note">macOS 12 Monterey ve üzeri gerekir · Apple Silicon &amp; Intel</p>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span>© 2026 Macopy. Tüm hakları saklıdır.</span>
+  <div class="footer-links">
+    <a href="https://github.com/blackowltr/Macopy" target="_blank">GitHub</a>
+    <a href="https://github.com/blackowltr/Macopy/releases" target="_blank">Sürümler</a>
+  </div>
+</footer>
+
+<script>
+  function switchTab(tab, btn) {
+    document.querySelectorAll('.itab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.ipanel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + tab).classList.add('active');
+  }
+</script>
+
+</body>
+</html>
