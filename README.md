@@ -52,6 +52,8 @@ open .build/Macopy.app
 2. İlk çalıştırmada **System Settings > Privacy & Security > Accessibility** izni istenir
 3. İzni ver, ⌘B ile paneli aç
 
+> **Not:** macOS "güvenilmeyen geliştirici" uyarısı verirse, uygulamaya sağ tıklayıp "Open" seçin veya terminalde: `xattr -cr /Applications/Macopy.app`
+
 ## Kullanım
 
 | Kısayol | İşlev |

@@ -21,11 +21,14 @@ cp "Resources/AppIcon.icns" "${APP_PATH}/Contents/Resources/"
 BINARY="${APP_PATH}/Contents/MacOS/${PRODUCT_NAME}"
 
 echo "==> Signing with ad-hoc signature..."
-if codesign --force --sign - "${BINARY}" 2>/dev/null; then
+if codesign --force --deep --sign - "${APP_PATH}" 2>/dev/null; then
     echo "     İmzalama başarılı"
 else
     echo "     İmzalama atlandı (gerekli değil)"
 fi
+
+echo "==> Removing quarantine attribute..."
+xattr -cr "${APP_PATH}" 2>/dev/null || true
 
 echo ""
 echo "  ✅  ${APP_NAME} oluşturuldu"
