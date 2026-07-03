@@ -10,6 +10,7 @@ final class PopupPanelController {
     private var clickMonitor: Any?
     private var isClosing = false
     private var isOpening = false
+    private var targetApplication: NSRunningApplication?
 
     init(monitor: ClipboardMonitor) {
         self.monitor = monitor
@@ -31,12 +32,16 @@ final class PopupPanelController {
     private func showPanel() {
         guard !isOpening, !isClosing else { return }
         isOpening = true
+        targetApplication = NSWorkspace.shared.frontmostApplication
 
+        let screenRect = targetScreenRect()
+        let panelSize = preferredPanelSize(for: screenRect)
         let contentView = HistoryView(
             monitor: monitor,
+            panelSize: panelSize,
             onSelect: { [weak self] item in
-                self?.monitor.pasteItem(item)
                 self?.closePanelNow()
+                self?.monitor.pasteItem(item, targetApplication: self?.targetApplication)
             },
             onClose: { [weak self] in
                 self?.closePanel()
@@ -46,8 +51,6 @@ final class PopupPanelController {
         let hosting = NSHostingController(rootView: contentView)
         hosting.view.wantsLayer = true
 
-        let panelSize = NSSize(width: 420, height: 560)
-        let screenRect = targetScreenRect()
         let centeredRect = centeredRect(of: panelSize, in: screenRect)
 
         let panel = NSPanel(
@@ -87,6 +90,8 @@ final class PopupPanelController {
     // MARK: - Observers
 
     private func setupObservers(for panel: NSPanel) {
+        teardownObservers()
+
         resignObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.didResignKeyNotification,
             object: panel,
@@ -142,6 +147,7 @@ final class PopupPanelController {
             p.orderOut(nil)
             self?.panel = nil
             self?.isClosing = false
+            self?.targetApplication = nil
         }
     }
 
@@ -183,5 +189,12 @@ final class PopupPanelController {
         let clampedY = max(container.origin.y, min(y, container.origin.y + container.height - size.height))
 
         return NSRect(x: clampedX, y: clampedY, width: size.width, height: size.height)
+    }
+
+    private func preferredPanelSize(for screenRect: NSRect) -> NSSize {
+        NSSize(
+            width: min(420, max(320, screenRect.width - 32)),
+            height: min(560, max(360, screenRect.height - 32))
+        )
     }
 }

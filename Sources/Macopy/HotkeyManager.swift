@@ -14,25 +14,36 @@ final class HotkeyManager {
     }
 
     func register() {
+        unregister()
+
         var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
 
-        InstallEventHandler(GetApplicationEventTarget(), { (_, eventRef, userData) -> OSStatus in
+        let handlerStatus = InstallEventHandler(GetApplicationEventTarget(), { (_, eventRef, userData) -> OSStatus in
             guard let userData = userData else { return noErr }
             let manager = Unmanaged<HotkeyManager>.fromOpaque(userData).takeUnretainedValue()
             manager.callback()
             return noErr
         }, 1, &eventType, Unmanaged.passUnretained(self).toOpaque(), &eventHandler)
+        guard handlerStatus == noErr else {
+            eventHandler = nil
+            return
+        }
 
         let modifiers: UInt32 = UInt32(cmdKey)
-        RegisterEventHotKey(11, modifiers, hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRef)
+        let hotKeyStatus = RegisterEventHotKey(11, modifiers, hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRef)
+        if hotKeyStatus != noErr {
+            unregister()
+        }
     }
 
     func unregister() {
         if let ref = hotKeyRef {
             UnregisterEventHotKey(ref)
+            hotKeyRef = nil
         }
         if let handler = eventHandler {
             RemoveEventHandler(handler)
+            eventHandler = nil
         }
     }
 

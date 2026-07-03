@@ -40,6 +40,7 @@ final class ClipboardMonitor: ObservableObject {
     }
 
     func start() {
+        stop()
         let interval = currentPollInterval()
         timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
             self?.checkPasteboard()
@@ -182,14 +183,11 @@ final class ClipboardMonitor: ObservableObject {
     // ── Add / Manage Items ──
 
     private func addItem(_ item: ClipboardItem) {
-        if let last = items.first,
-           last.type == item.type,
-           last.textValue == item.textValue,
-           last.imageData == item.imageData {
+        if let last = items.first, last.hasSameContent(as: item) {
             return
         }
 
-        let processedItem: ClipboardItem
+        var processedItem: ClipboardItem
         if item.type == .image, let img = item.nsImage, let compressed = compressedImageData(from: img) {
             var mutable = ClipboardItem(image: img)
             mutable.imageData = compressed
@@ -197,10 +195,12 @@ final class ClipboardMonitor: ObservableObject {
         } else {
             processedItem = item
         }
+        processedItem.isPinned = items.first(where: { $0.hasSameContent(as: processedItem) })?.isPinned ?? false
 
         autoCleanOldItems()
 
         withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+            items.removeAll { $0.hasSameContent(as: processedItem) }
             items.insert(processedItem, at: 0)
             trimToLimit()
             trimToStorageLimit()
@@ -218,7 +218,7 @@ final class ClipboardMonitor: ObservableObject {
         let unpinned = items.filter { !$0.isPinned }
         if unpinned.count > maxItems {
             let trimmedUnpinned = Array(unpinned.prefix(maxItems))
-            items = (pinned + trimmedUnpinned).sorted { $0.date > $1.date }
+            items = (pinned + trimmedUnpinned).sortedForDisplay()
         }
     }
 
@@ -235,6 +235,7 @@ final class ClipboardMonitor: ObservableObject {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
             items[idx].isPinned.toggle()
+            items = items.sortedForDisplay()
         }
         saveToDiskAsync()
     }
@@ -255,7 +256,7 @@ final class ClipboardMonitor: ObservableObject {
 
     // ── Paste ──
 
-    func pasteItem(_ item: ClipboardItem) {
+    func pasteItem(_ item: ClipboardItem, targetApplication: NSRunningApplication? = nil) {
         let pb = NSPasteboard.general
         pb.clearContents()
 
@@ -274,17 +275,17 @@ final class ClipboardMonitor: ObservableObject {
         }
 
         lastChangeCount = pb.changeCount
-        PasteSimulator.simulatePaste()
+        PasteSimulator.simulatePaste(into: targetApplication)
     }
 
     // ── Persistence ──
 
     private func saveToDiskAsync() {
         let url = storageURL
-        saveQueue.async { [weak self] in
-            guard let items = self?.items else { return }
+        let snapshot = items
+        saveQueue.async {
             do {
-                let data = try JSONEncoder().encode(items)
+                let data = try JSONEncoder().encode(snapshot)
                 try data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
             } catch {
                 print("Geçmiş kaydedilemedi: \(error)")
@@ -295,7 +296,7 @@ final class ClipboardMonitor: ObservableObject {
     private func loadFromDisk() {
         guard let data = try? Data(contentsOf: storageURL) else { return }
         if let decoded = try? JSONDecoder().decode([ClipboardItem].self, from: data) {
-            items = decoded
+            items = decoded.sortedForDisplay()
         }
         autoCleanOldItems()
     }
@@ -316,4 +317,21 @@ final class ClipboardMonitor: ObservableObject {
 
 extension Notification.Name {
     static let macopyNewCopy = Notification.Name("macopyNewCopy")
+}
+
+private extension ClipboardItem {
+    func hasSameContent(as other: ClipboardItem) -> Bool {
+        type == other.type &&
+            textValue == other.textValue &&
+            imageData == other.imageData
+    }
+}
+
+private extension Array where Element == ClipboardItem {
+    func sortedForDisplay() -> [ClipboardItem] {
+        sorted {
+            if $0.isPinned != $1.isPinned { return $0.isPinned }
+            return $0.date > $1.date
+        }
+    }
 }

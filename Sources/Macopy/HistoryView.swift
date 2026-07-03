@@ -22,6 +22,7 @@ private enum Theme {
 
 struct HistoryView: View {
     @ObservedObject var monitor: ClipboardMonitor
+    var panelSize = NSSize(width: 420, height: 560)
     var onSelect: (ClipboardItem) -> Void
     var onClose: () -> Void
 
@@ -30,10 +31,7 @@ struct HistoryView: View {
     @FocusState private var isSearchFocused: Bool
 
     private var searchResults: [ClipboardItem] {
-        let sorted = monitor.items.sorted { a, b in
-            if a.isPinned != b.isPinned { return a.isPinned }
-            return a.date > b.date
-        }
+        let sorted = monitor.items.sortedForDisplay()
         guard !searchText.isEmpty else { return Array(sorted.prefix(100)) }
         return sorted.filter {
             $0.previewText.localizedCaseInsensitiveContains(searchText)
@@ -76,7 +74,7 @@ struct HistoryView: View {
                 listSection
             }
         }
-        .frame(width: 420, height: 560)
+        .frame(width: panelSize.width, height: panelSize.height)
         .background(VisualEffectView(material: .hudWindow, blendingMode: .behindWindow))
         .clipShape(RoundedRectangle(cornerRadius: 18))
         .shadow(color: .black.opacity(0.35), radius: 50, x: 0, y: 15)
@@ -107,11 +105,11 @@ struct HistoryView: View {
                     .foregroundColor(Theme.textPrimary)
             }
 
-            Spacer()
+            Spacer(minLength: 12)
 
-                Text("⌘B")
-                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .foregroundColor(Theme.textSecondary)
+            Text("⌘B")
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .foregroundColor(Theme.textSecondary)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(Theme.surfacePrimary)
@@ -151,6 +149,7 @@ struct HistoryView: View {
                     }
                     .buttonStyle(.plain)
                     .transition(.scale.combined(with: .opacity))
+                    .help("Aramayı temizle")
                 }
             }
             .padding(.horizontal, 14)
@@ -290,6 +289,7 @@ private struct ItemRow: View {
                 Text(item.previewText)
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .lineLimit(2)
+                    .truncationMode(.tail)
                     .foregroundColor(Theme.textPrimary)
 
                 HStack(spacing: 8) {
@@ -313,17 +313,28 @@ private struct ItemRow: View {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 20))
                     .foregroundColor(Theme.accentGreen)
+                    .frame(width: 58, alignment: .trailing)
                     .transition(.scale.combined(with: .opacity))
             } else if isHovering {
                 HStack(spacing: 2) {
-                    actionButton(icon: "pin", color: item.isPinned ? Theme.accentYellow : Theme.textTertiary, action: onPin)
-                    actionButton(icon: "xmark.circle", color: Theme.accentRed, action: onDelete)
+                    actionButton(
+                        icon: item.isPinned ? "pin.slash" : "pin",
+                        color: item.isPinned ? Theme.accentYellow : Theme.textTertiary,
+                        help: item.isPinned ? "Sabitlemeyi kaldır" : "Sabitle",
+                        action: onPin
+                    )
+                    actionButton(icon: "xmark.circle", color: Theme.accentRed, help: "Sil", action: onDelete)
                 }
+                .frame(width: 58, alignment: .trailing)
                 .transition(.move(edge: .trailing).combined(with: .opacity))
             } else if item.isPinned {
                 Image(systemName: "pin.fill")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(Theme.accentYellow)
+                    .frame(width: 58, alignment: .trailing)
+            } else {
+                Color.clear
+                    .frame(width: 58)
             }
         }
         .padding(.horizontal, 14)
@@ -362,7 +373,7 @@ private struct ItemRow: View {
         }
     }
 
-    private func actionButton(icon: String, color: Color, action: @escaping () -> Void) -> some View {
+    private func actionButton(icon: String, color: Color, help: String, action: @escaping () -> Void) -> some View {
         Button {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 action()
@@ -376,6 +387,7 @@ private struct ItemRow: View {
                 .clipShape(RoundedRectangle(cornerRadius: 7))
         }
         .buttonStyle(.plain)
+        .help(help)
     }
 
     @ViewBuilder
@@ -418,6 +430,15 @@ private struct ItemRow: View {
                         .foregroundColor(Theme.accentPurple)
                 }
             }
+        }
+    }
+}
+
+private extension Array where Element == ClipboardItem {
+    func sortedForDisplay() -> [ClipboardItem] {
+        sorted {
+            if $0.isPinned != $1.isPinned { return $0.isPinned }
+            return $0.date > $1.date
         }
     }
 }
