@@ -18,7 +18,7 @@ class UpdateChecker {
             guard let data = data, error == nil,
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let tagName = json["tag_name"] as? String,
-                  let releaseURL = json["html_url"] as? String else {
+                  let htmlURL = json["html_url"] as? String else {
                 if showUpToDate {
                     DispatchQueue.main.async {
                         showAlert(title: "Güncelleme Kontrolü",
@@ -31,28 +31,85 @@ class UpdateChecker {
             let remoteVersion = tagName.hasPrefix("v") ? String(tagName.dropFirst()) : tagName
             let isNewer = remoteVersion.compare(currentVersion, options: .numeric) == .orderedDescending
 
-            DispatchQueue.main.async {
-                if isNewer {
-                    let alert = NSAlert()
-                    alert.messageText = "Yeni Sürüm Mevcut: \(tagName)"
-                    alert.informativeText = "Macopy \(remoteVersion) yayında. Şimdi güncelle?"
-                    alert.addButton(withTitle: "İndir")
-                    alert.addButton(withTitle: "Daha Sonra")
-                    if alert.runModal() == .alertFirstButtonReturn {
-                        if let url = URL(string: releaseURL) {
-                            NSWorkspace.shared.open(url)
-                        }
+            if !isNewer {
+                if showUpToDate {
+                    DispatchQueue.main.async {
+                        showAlert(title: "Güncelleme Kontrolü",
+                                  message: "Macopy \(currentVersion) — en güncel sürümü kullanıyorsun.")
                     }
-                } else if showUpToDate {
-                    showAlert(title: "Güncelleme Kontrolü",
-                              message: "Macopy \(currentVersion) — en güncel sürümü kullanıyorsun.")
                 }
+                return
+            }
+
+            // Find DMG asset URL
+            var dmgURL: URL?
+            if let assets = json["assets"] as? [[String: Any]] {
+                for asset in assets {
+                    if let name = asset["name"] as? String, name.hasSuffix(".dmg"),
+                       let urlStr = asset["browser_download_url"] as? String {
+                        dmgURL = URL(string: urlStr)
+                        break
+                    }
+                }
+            }
+
+            DispatchQueue.main.async {
+                showUpdatePrompt(tag: tagName, version: remoteVersion, htmlURL: htmlURL, dmgURL: dmgURL)
             }
         }.resume()
     }
 
     static func checkSilently() {
         check(showUpToDate: false)
+    }
+
+    // MARK: - UI
+
+    private static func showUpdatePrompt(tag: String, version: String, htmlURL: String, dmgURL: URL?) {
+        let alert = NSAlert()
+        alert.messageText = "Yeni Sürüm Mevcut: \(tag)"
+        alert.informativeText = "Macopy \(version) yayında."
+        alert.addButton(withTitle: "Güncelle ve İndir")
+        if dmgURL != nil {
+            alert.addButton(withTitle: "Arkaplanda İndir")
+        }
+        alert.addButton(withTitle: "Daha Sonra")
+
+        switch alert.runModal() {
+        case .alertFirstButtonReturn:
+            if let url = URL(string: htmlURL) {
+                NSWorkspace.shared.open(url)
+            }
+        case .alertSecondButtonReturn:
+            if let url = dmgURL {
+                downloadAndOpenDMG(url)
+            }
+        default:
+            break
+        }
+    }
+
+    private static func downloadAndOpenDMG(_ url: URL) {
+        let task = URLSession.shared.downloadTask(with: url) { localURL, _, error in
+            guard let localURL = localURL, error == nil else {
+                DispatchQueue.main.async {
+                    showAlert(title: "İndirme Başarısız",
+                              message: "DMG indirilemedi. Tarayıcıdan indirmeyi dene.")
+                }
+                return
+            }
+
+            let destURL = URL(fileURLWithPath: "/tmp/Macopy-Update.dmg")
+            try? FileManager.default.removeItem(at: destURL)
+            try? FileManager.default.moveItem(at: localURL, to: destURL)
+
+            DispatchQueue.main.async {
+                NSWorkspace.shared.open(destURL)
+                showAlert(title: "İndirme Tamamlandı",
+                          message: "DMG açıldı. Macopy'yi Applications'a sürükleyip bırak.")
+            }
+        }
+        task.resume()
     }
 
     private static func showAlert(title: String, message: String) {
