@@ -28,6 +28,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupHotkey()
         observeSleepWake()
         registerLoginItemIfNeeded()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            UpdateChecker.checkSilently()
+        }
     }
 
     // MARK: - Status Bar
@@ -70,6 +74,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(autoLaunchItem)
 
         menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(
+            title: "Güncellemeleri Kontrol Et",
+            action: #selector(checkForUpdates),
+            keyEquivalent: ""
+        ))
         menu.addItem(NSMenuItem(
             title: "Macopy Hakkında",
             action: #selector(showAbout),
@@ -176,6 +185,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func showAbout() {
         NSApplication.shared.orderFrontStandardAboutPanel(nil)
+    }
+
+    @objc func checkForUpdates() {
+        UpdateChecker.check(showUpToDate: true)
     }
 
     @objc func quit() {
