@@ -29,7 +29,7 @@ Windows'taki **Win+V** pano geçmişi özelliğinin macOS karşılığı. Menü 
 ### Homebrew (Önerilen)
 
 ```bash
-brew tap baris/tap
+brew tap blackowltr/tap
 brew install --cask macopy
 ```
 
